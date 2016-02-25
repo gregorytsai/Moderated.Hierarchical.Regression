@@ -63,16 +63,16 @@ saveWorkbook(wb, "Moderated stepwise regression.xlsx",  overwrite = TRUE)
 
 
 #######################Don't mess with these codes, just execute#######################################
-dataDependent <- data %>% select_(
+dataDependent <- data %>% dplyr::select_(
   paste(names(data)[dependantVarStart],names(data)[dependantVarEnd],sep=":") )
-dataControl <- data %>% select_(
+dataControl <- data %>% dplyr::select_(
   paste(names(data)[controlVarStart],names(data)[controlVarEnd],sep=":") )
-dataPredictor <- data %>% select_(
+dataPredictor <- data %>% dplyr::select_(
   paste(names(data)[predictorVarStart],names(data)[predictorVarEnd],sep=":") )
-dataModerator <- data %>% select_(
+dataModerator <- data %>% dplyr::select_(
   paste(names(data)[moderatorVarStart],names(data)[moderatorVarEnd],sep=":") )
 dataAll=data.frame(dataDependent,scale(dataControl),scale(dataPredictor),scale(dataModerator) ) %>%
-  filter(complete.cases(.))
+  dplyr::filter(complete.cases(.))
 
 ##Function: Calculate regression model p
 lmp <- function (modelobject) 
