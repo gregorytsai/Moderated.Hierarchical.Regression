@@ -1,4 +1,4 @@
-# Moderated.Hierarchical.Regression.with.Control.Groups
+# Moderated.Hierarchical.Regression
 
 Use when you need to run LOTS of Hierarchical regressions
 Reads Excel or CSV files
