@@ -125,7 +125,7 @@ step3Result=c("Dep. Var.","Pred. Var.","Mod. Var.","Delta R2","Adj.R2","Pred.Bet
 # i=1
 
 #Starts Regressions
-for (i in 1:ncol(dataPredictor)){
+for (i in 1:ncol(dataDependent)){
   ##Step 1
   result1Temp=matrix(nrow=1,ncol=ncol(step1Result))
   stpe1Regression=lm(formula=paste(names(dataDependent[i]),controlRegNames,sep="~"),data=dataAll)
@@ -163,8 +163,8 @@ for (i in 1:ncol(dataPredictor)){
       model2P=lmp(stpe2Regression)
       step2ModelCompare=modelCompare(stpe1Regression, stpe2Regression)
       result2Temp[1]=names(dataDependent[i])                  #Dependent Var. name
-      result2Temp[2]=names(dataPredictor[i])                  #Predictor Var. name
-      result2Temp[3]=names(dataModerator[i])                  #Moderator Var. name
+      result2Temp[2]=names(dataPredictor[j])                  #Predictor Var. name
+      result2Temp[3]=names(dataModerator[k])                  #Moderator Var. name
       result2Temp[4]=step2ModelCompare$DeltaR2 %>%            #delta R2
         round(.,2) %>% addStar(.,step2ModelCompare$p)
       result2Temp[5]=Step2Summary$adj.r.squared %>% #Adj. R2
@@ -190,8 +190,8 @@ for (i in 1:ncol(dataPredictor)){
       model3P=lmp(stpe3Regression)
       step3ModelCompare=modelCompare(stpe2Regression, stpe3Regression)
       result3Temp[1]=names(dataDependent[i])                  #Dependent Var. name
-      result3Temp[2]=names(dataPredictor[i])                  #Predictor Var. name
-      result3Temp[3]=names(dataModerator[i])                  #Moderator Var. name
+      result3Temp[2]=names(dataPredictor[j])                  #Predictor Var. name
+      result3Temp[3]=names(dataModerator[k])                  #Moderator Var. name
       result3Temp[4]=step3ModelCompare$DeltaR2 %>%            #delta R2
         round(.,2) %>% addStar(.,step3ModelCompare$p)
       result3Temp[5]=Step3Summary$adj.r.squared %>% #Adj. R2
