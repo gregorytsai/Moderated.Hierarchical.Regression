@@ -7,10 +7,12 @@
 
 ##Install if you wish to read or save as Excel file
 install.packages("openxlsx")
-install.packages("dplyr")
+install.packages("dplyr")     #For data manipulation
+install.packages("lmSupport") #for model compare
 ##Load the package when you open R
 library(openxlsx)
 library(dplyr)
+library(lmSupport)
 
 
 
@@ -23,16 +25,16 @@ data=read.csv("FinalDataPool.csv", header=T)
 data=read.xlsx(".xlsx")  
 
 ###First assigning which variables to run, changes the values and run these part
-##Dependent Vars
+##Dependent Vars column, assign the same number if there's only 1 control
 dependantVarStart=18   
 dependantVarEnd=20 
-##Contro variable
+##Contro variables column
 controlVarStart=3
 controlVarEnd=4
-##Predictor Variables
+##Predictor Variables column
 predictorVarStart=5
 predictorVarEnd=7
-##Moderator Variables
+##Moderator Variables column
 moderatorVarStart=8
 moderatorVarEnd=17
 ###End of assigning
@@ -48,12 +50,12 @@ moderatorVarEnd=17
 ##https://github.com/stan-dev/rstan/wiki/Install-Rtools-for-Windows
 ##Remember to select "Edit the system path" while installing
 wb <- createWorkbook()
-addWorksheet(wb = wb, sheetName = "Step1: Control Var.", gridLines = FALSE)
-writeData(wb = wb, sheet = 1, x = step1Result)
-addWorksheet(wb = wb, sheetName = "Step2: Main Effect", gridLines = FALSE)
-writeData(wb = wb, sheet = 2, x = step2Result)
-addWorksheet(wb = wb, sheetName = "Step3: Interaction", gridLines = FALSE)
-writeData(wb = wb, sheet = 3, x = step3Result)
+addWorksheet(wb = wb, sheetName = "Step1_Control Var.", gridLines = T)
+writeData(wb = wb, sheet = 1, x = step1Result,colNames = F)
+addWorksheet(wb = wb, sheetName = "Step2_Main Effect", gridLines = T)
+writeData(wb = wb, sheet = 2, x = step2Result,colNames = F)
+addWorksheet(wb = wb, sheetName = "Step3_Interaction", gridLines = T)
+writeData(wb = wb, sheet = 3, x = step3Result,colNames = F)
 saveWorkbook(wb, "Moderated stepwise regression.xlsx",  overwrite = TRUE)
 #End of saving Excel
 
