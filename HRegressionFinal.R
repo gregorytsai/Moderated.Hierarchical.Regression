@@ -1,54 +1,82 @@
 ##################################################################################
-###Ｓtinky tofu guilt reduction
-##2015.3.15
+##2016.2.25
+##
 ##Author:GregTsai   Email:gregorytsai@gmail.com
-##Developed on R Ver.3.1.2
+##Developed and tested on R Ver.3.2.3 Windows
 ##################################################################################
 
-##Install packages before first time use
-install.packages("psych")   # For correlation Test
-install.packages("car")     
-install.packages("ggplot2")
-install.packages("pequod")  #For simple slope
-install.packages("lmSupport") #For delta R square
-install.packages("MBESS")     #For mediation
-install.packages("gsl")       #For mediation
-
-
- 
-##Run after launching R
-library("psych")
-library("car") 
-library("ggplot2")
-library("pequod")
-library("lmSupport")
-library("MBESS")
-library("gsl")
+##Install if you wish to read or save as Excel file
+install.packages("openxlsx")
+install.packages("dplyr")
+##Load the package when you open R
+library(openxlsx)
+library(dplyr)
 
 
 
+####Defined by user
+##Import  your data
+##Reading csv by choosing which one
+data=read.csv(file.choose(), header=T) 
+##Reading by assigning file names or path
+data=read.csv("FinalDataPool.csv", header=T) 
+data=read.xlsx(".xlsx")  
 
-##
-data=read.csv("~/Documents/碩論資料/Data anlysis/20150213/20150628.csv", header=T) 
+###First assigning which variables to run, changes the values and run these part
+##Dependent Vars
+dependantVarStart=18   
+dependantVarEnd=20 
+##Contro variable
+controlVarStart=3
+controlVarEnd=4
+##Predictor Variables
+predictorVarStart=5
+predictorVarEnd=7
+##Moderator Variables
+moderatorVarStart=8
+moderatorVarEnd=17
+###End of assigning
 
-names(data)
-nrow(data)
-ncol(data)
+###About the result:
+#You can type step1Result, step2Result, step3Result to see them in R
+#The results will be automatically saved to working directory as 3 csv files
+#Working directory is usually in your user document folder
+#If you're not sure of where it is, use getwd() to check
+#If you want to save as Excel, try the following code:
+##Save as 3 sheet excel
+##Needs to install Rtools: 
+##https://github.com/stan-dev/rstan/wiki/Install-Rtools-for-Windows
+wb <- createWorkbook()
+addWorksheet(wb = wb, sheetName = "Step1: Control Var.", gridLines = FALSE)
+writeData(wb = wb, sheet = 1, x = step1Result)
+addWorksheet(wb = wb, sheetName = "Step2: Main Effect", gridLines = FALSE)
+writeData(wb = wb, sheet = 2, x = step2Result)
+addWorksheet(wb = wb, sheetName = "Step3: Interaction", gridLines = FALSE)
+writeData(wb = wb, sheet = 3, x = step3Result)
+names(wb)  ## ordering within workbook is not changed
+saveWorkbook(wb, "Moderated stepwise regression.xlsx",  overwrite = TRUE)
+#End of saving Excel
 
 
-##
-p=0.05
-num=1
+#After assigning which variables to run, just execute all the codes below 
 
 
 
-##############################################################
-result = matrix(nrow=1, ncol=23)    #
-result = c("DependentVar","Var1","Var2","Adj. R Square","Model p","Var1 b","Var1 p","Var2 b","Var2 p","Interaction b","Interaction p","Mod1","Mod1LowR","Mod1HighR","Mod1 p","Mod2","Mod2LowR","Mod2HighR","Mod2 p","LowIndeLowMod", "LowIndeHighMod", "HighIndeLowMod", "HighIndeHighMod")                     
+#######################Don't mess with these codes, just execute#######################################
+dataDependent <- data %>% select_(
+  paste(names(data)[dependantVarStart],names(data)[dependantVarEnd],sep=":") )
+dataControl <- data %>% select_(
+  paste(names(data)[controlVarStart],names(data)[controlVarEnd],sep=":") )
+dataPredictor <- data %>% select_(
+  paste(names(data)[predictorVarStart],names(data)[predictorVarEnd],sep=":") )
+dataModerator <- data %>% select_(
+  paste(names(data)[moderatorVarStart],names(data)[moderatorVarEnd],sep=":") )
+dataAll=data.frame(dataDependent,scale(dataControl),scale(dataPredictor),scale(dataModerator) ) %>%
+  filter(complete.cases(.))
 
-
-##­
-lmp <- function (modelobject) {
+##Function: Calculate regression model p
+lmp <- function (modelobject) 
+{
 	if (class(modelobject) != "lm") stop("Not an object of class 'lm' ")
 	f <- summary(modelobject)$fstatistic
 	p <- pf(f[1],f[2],f[3],lower.tail=F)
@@ -56,212 +84,140 @@ lmp <- function (modelobject) {
 	return(p)
 } 
 
-##
-corCalculate <- function (dep, pre, mod) {
-	avg=mean(data[,mod],na.rm=T)                 #­
-	group=matrix(ncol=1,nrow=nrow(data))       #
-	for (r in 1:nrow(data)) {
-		if (is.na(data[r,mod]))   {group[r]=NA}
-		else if (data[r,mod]>avg) {group[r]=1} #
-		else if (data[r,mod]<avg) {group[r]=0} #
-		}
-
-	#
-	mydata = cbind(data[,pre],data[,dep],group)
-	mydata0=subset(mydata, group==0)
-	mydata1=subset(mydata, group==1)
-	n0=nrow(mydata0)
-	n1=nrow(mydata1)
-
-	#­
-	cor0=round(cor(mydata0[,1],mydata0[,2],use="pairwise.complete.obs"),digits=3)
-	cor1=round(cor(mydata1[,1],mydata1[,2],use="pairwise.complete.obs"),digits=3)
-	rTest=r.test(n=n0,cor0,cor1,n2=n1) #
-
-	result=cbind(names(data[mod]),cor0,cor1,round(rTest$p,digits=4),deparse.level = 0)
-	return(result)
-} 
-
-
-
-#
-for (i in 28:35) 
+##add significance stars, maybe doing vectorized calculation in the future
+addStar <- function(name,pvalue)
 {
-	for (j in 8:10 )
-	 {
-		for (k in 49:57) 
-		{
-			
-			model <- lm(data[,i] ~ scale(data[,3]) + scale(data[,4]) + scale(data[,j])*scale(data[,k]))
-			modelP=lmp(model)
-			moderatorP=summary.lm(model)$coefficients["scale(data[, j]):scale(data[, k])","Pr(>|t|)"]
-	      	if (moderatorP<=p) {
-				
+	if (pvalue<0.001) {nameStar=paste0(name,"***")}
+	else if (pvalue<0.01) {nameStar=paste0(name,"**")}
+	else if (pvalue<=0.05) {nameStar=paste0(name,"*")}
+	else if (pvalue<0.10) {nameStar=paste0(name,"†")}
+	else {nameStar=name}
 
-				cor1=corCalculate(i, k, j) #
-				cor2=corCalculate(i, j, k) #
-				
-				#simple slope
-				modelSimple=paste0(names(data[i]),"~",names(data[j]),"*",names(data[k]))
-				mod5=lmres(formula=modelSimple  , centered=c(names(data[j]),names(data[k])),data=data)
-				slopedist=simpleSlope(mod5, pred=names(data[j]), mod1=names(data[k]))  
-				chart=paste0(  "Chart",num,".jpg" )
-				jpeg(file=chart,height=480,width=720,res = 72,units = "px",pointsize=16,quality=90)
-				print(PlotSlope(slopedist)) 
-				dev.off() 
-				num=num+1
-				
-
-
-				
-				
-				
-				
-				modelR2=round(summary.lm(model)$adj.r.squared,digits=3)
-				var1B=round(summary.lm(model)$coefficients["scale(data[, j])","Estimate"],digits=3)
-				var2B=round(summary.lm(model)$coefficients["scale(data[, k])","Estimate"],digits=3)
-				interB=round(summary.lm(model)$coefficients["scale(data[, j]):scale(data[, k])","Estimate"],digits=3)
-				var1P=round(summary.lm(model)$coefficients["scale(data[, j])","Pr(>|t|)"],digits=4)
-				var2P=round(summary.lm(model)$coefficients["scale(data[, k])","Pr(>|t|)"],digits=4)
-				interP=round(summary.lm(model)$coefficients["scale(data[, j]):scale(data[, k])","Pr(>|t|)"],digits=4)
-				regData=cbind(names(data[i]),names(data[j]),names(data[k]),modelR2,round(modelP,digits=4),var1B,var1P,var2B,var2P,interB,interP,deparse.level = 0)
-				
-				#
-				resultAll=cbind(regData,cor1,cor2,slopedist$Point[1], slopedist$Point[2], slopedist$Point[3], slopedist$Point[4])
-				result = rbind( result,resultAll)
-
-				rm(var1B)
-				rm(var2B)
-				rm(interB)
-				rm(var1P)
-				rm(var2P)
-				rm(interP)
-				rm(regData)
-				rm(cor1)
-				rm(cor2)
-				rm(resultAll)
-			}
-			rm(modelP)
-			rm(moderatorP)
-		}
-	}
-
+	return(nameStar)
 }
 
-##simple slope  example
-mod5=lmres(impulsive ~ gender + educationmoma + PCE*Teaching  , centered=c("PCE","Teaching"), data=data)
-slopedist=simpleSlope(mod5, pred="PCE", mod1="Actx13r") 
-summary(slopedist) 
-PlotSlope(slopedist) 
-chart=paste0(  "Chart",num,".jpg" )
-jpeg(file=chart) 
-num=num+1
+
+#step 1 control var.
+#set step 1 result format: dep, control1, control2,... , deltr R2, Adj R2, betas...
+step1Result=matrix(nrow=1,ncol=(ncol(dataControl)*2+3))
+step1Result[1]="Dep. Var."
+step1Result[ncol(dataControl)+2]="Delta R2"
+step1Result[ncol(dataControl)+3]="Adj. R2"
+for (i in 1:ncol(dataControl)){
+  step1Result[i+1]=paste("Control Var",i)
+  step1Result[i+ncol(dataControl)+3]=paste("Control",i, "beta")
+}
+controlRegNames=names(dataControl[1])
+if(ncol(dataControl)>1){
+  for (i in 2:ncol(dataControl)){
+    controlRegNames=paste(controlRegNames,names(dataControl[i]),sep="+")
+  }
+}
+
+#Step2Result
+step2Result=matrix(nrow=1,ncol=7)
+step2Result=c("Dep. Var.","Pred. Var.","Mod. Var.","Delta R2","Adj.R2","Pred.Beta","Mod.Beta")
+
+#Step3Result
+step3Result=matrix(nrow=1,ncol=8)
+step3Result=c("Dep. Var.","Pred. Var.","Mod. Var.","Delta R2","Adj.R2","Pred.Beta","Mod.Beta","Interaction b")
+
+# i=1
+
+#Starts Regressions
+for (i in 1:ncol(dataPredictor)){
+  ##Step 1
+  result1Temp=matrix(nrow=1,ncol=ncol(step1Result))
+  stpe1Regression=lm(formula=paste(names(dataDependent[i]),controlRegNames,sep="~"),data=dataAll)
+  Step1Summary=summary(stpe1Regression)
+  model1P=lmp(stpe1Regression)
+  result1Temp[1]=names(dataDependent[i])                  #Dependent Var. name
+  result1Temp[ncol(dataControl)+2]=Step1Summary$r.squared %>% round(.,2) #delta R2
+  result1Temp[ncol(dataControl)+3]=Step1Summary$adj.r.squared %>%  #Adj. R2
+    round(.,2) %>%
+    addStar(.,model1P)
+  for (j in 1:ncol(dataControl)){
+    result1Temp[j+1]=names(dataControl[j])
+    result1Temp[j+ncol(dataControl)+3]=
+      Step1Summary$coefficients[names(dataControl[j]),"Estimate"] %>%
+      round(.,2) %>%
+      addStar(., Step1Summary$coefficients[names(dataControl[j]),"Pr(>|t|)"])
+  }
+  step1Result=rbind(step1Result,result1Temp)
+  
+  #Debugging
+  # j=1
+  # k=1
+  
+  #Step2 & 3
+  for (j in 1:ncol(dataPredictor)){
+    for (k in 1:ncol(dataModerator)){
+      #Step2
+      result2Temp=matrix(nrow=1,ncol=7)
+      step2Formula=paste(names(dataDependent[i]),"~",
+                         controlRegNames,"+",
+                         names(dataPredictor[j]),"+",
+                         names(dataModerator[k]))
+      stpe2Regression=lm(formula=step2Formula,data=dataAll)
+      Step2Summary=summary(stpe2Regression)
+      model2P=lmp(stpe2Regression)
+      step2ModelCompare=modelCompare(stpe1Regression, stpe2Regression)
+      result2Temp[1]=names(dataDependent[i])                  #Dependent Var. name
+      result2Temp[2]=names(dataPredictor[i])                  #Predictor Var. name
+      result2Temp[3]=names(dataModerator[i])                  #Moderator Var. name
+      result2Temp[4]=step2ModelCompare$DeltaR2 %>%            #delta R2
+        round(.,2) %>% addStar(.,step2ModelCompare$p)
+      result2Temp[5]=Step2Summary$adj.r.squared %>% #Adj. R2
+        round(.,2) %>% addStar(.,model2P)
+      result2Temp[6]=                                         #Predictor beta
+        Step2Summary$coefficients[names(dataPredictor[j]),"Estimate"] %>%
+        round(.,2) %>%
+        addStar(.,Step2Summary$coefficients[names(dataPredictor[j]),"Pr(>|t|)"])
+      result2Temp[7]=                                         #Moderator beta
+        Step2Summary$coefficients[names(dataModerator[k]),"Estimate"] %>%
+        round(.,2) %>%
+        addStar(.,Step2Summary$coefficients[names(dataModerator[k]),"Pr(>|t|)"])
+      step2Result=rbind(step2Result,result2Temp)
+      
+      #Step3
+      result3Temp=matrix(nrow=1,ncol=8)
+      step3Formula=paste(names(dataDependent[i]),"~",
+                         controlRegNames,"+",
+                         names(dataPredictor[j]),"*",
+                         names(dataModerator[k]))
+      stpe3Regression=lm(formula=step3Formula,data=dataAll)
+      Step3Summary=summary(stpe3Regression)
+      model3P=lmp(stpe3Regression)
+      step3ModelCompare=modelCompare(stpe2Regression, stpe3Regression)
+      result3Temp[1]=names(dataDependent[i])                  #Dependent Var. name
+      result3Temp[2]=names(dataPredictor[i])                  #Predictor Var. name
+      result3Temp[3]=names(dataModerator[i])                  #Moderator Var. name
+      result3Temp[4]=step3ModelCompare$DeltaR2 %>%            #delta R2
+        round(.,2) %>% addStar(.,step3ModelCompare$p)
+      result3Temp[5]=Step3Summary$adj.r.squared %>% #Adj. R2
+        round(.,2) %>% addStar(.,model3P)
+      result3Temp[6]=                                         #Predictor beta
+        Step3Summary$coefficients[names(dataPredictor[j]),"Estimate"] %>%
+        round(.,2) %>%
+        addStar(.,Step3Summary$coefficients[names(dataPredictor[j]),"Pr(>|t|)"])
+      result3Temp[7]=                                         #Moderator beta
+        Step3Summary$coefficients[names(dataModerator[k]),"Estimate"] %>%
+        round(.,2) %>%
+        addStar(.,Step3Summary$coefficients[names(dataModerator[k]),"Pr(>|t|)"])
+      result3Temp[8]=                                         #Interaction beta
+        Step3Summary$coefficients[paste0(names(dataPredictor[j]),":",names(dataModerator[k])),"Estimate"] %>%
+        round(.,2) %>%
+        addStar(.,Step3Summary$coefficients[paste0(names(dataPredictor[j]),":",names(dataModerator[k])),"Pr(>|t|)"])
+      
+      step3Result=rbind(step3Result,result3Temp)
+      
+    }
+  }
+  ##Save as csv, after every predictor 
+  write.csv(step1Result,"Step1.csv")
+  write.csv(step2Result,"Step2.csv")
+  write.csv(step3Result,"Step3.csv")
+}
 
 
-##reg naming
-			model <- lm(data[,i] ~ scale(data[,j])*scale(data[,k]))
-			summary(model)
-			model1 <- lm(data$ChildCentered ~ scale(data$PCE)*scale(data$Actx13r))
-			summary(model1)
-			model2 <- lm(ChildCentered ~ scale(PCE)*scale(Actx13r),data=data)
-			summary(model2)
-			modelCompare(model1, model2)
 
-##HLM
-			model1 <- lm(ChildCentered ~ scale(PCE)+scale(Actx13r),data=data)
-			summary(model1)
-			model2 <- lm(ChildCentered ~ scale(PCE)*scale(Actx13r),data=data)
-			summary(model2)
-			modelCompare(model1, model2)
-
-
-##
-write.csv("~/Documents/碩論資料/Data anlysis/20150213/20150712.csv", x=result, row.names = F,col.names = F)
-
-
-
-
-##mediation
-dataTemp = cbind(data1[,3:4],data1[,9:12],data1[,21],data1[,23],data1[,27:28],data1[,30],data1[,25],data1[,38])
-mydata = dataTemp[complete.cases(dataTemp),]   #find completedata but i may need to rename the variable
-mediation(x=data$PCE, mediator=data$PALSL, dv=data$QFactA, bootstrap = T, B = 1000)
-
-
-##simple slope ChildCentered PCE*Actx13r
-mod5=lmres(ChildCentered ~ gender + educationmoma + PCE* Actx13r  , centered=c("PCE","Actx13r"), data=data)
-slopedist=simpleSlope(mod5, pred="PCE", mod1="Actx13r") 
-slopedist2=simpleSlope(mod5, pred="Actx13r", mod1="PCE")  
-summary(slopedist) 
-summary(slopedist2) 
-
-
-##simple slope LOG1pcenter EVE*PercepSensitive
-mod5=lmres(LOG1pcenter ~ gender + educationmoma + EVE * PercepSensitive  , centered=c("EVE","PercepSensitive"), data=data)
-slopedist=simpleSlope(mod5, pred="EVE", mod1="PercepSensitive") 
-slopedist2=simpleSlope(mod5, pred="PercepSensitive", mod1="EVE")  
-summary(slopedist) 
-summary(slopedist2) 
-
-
-##simple slope LOG1pcenter EVE* AttenionFocus
-mod5=lmres(LOG1pcenter ~ gender + educationmoma + EVE * AttenionFocus  , centered=c("EVE","AttenionFocus"), data=data)
-slopedist=simpleSlope(mod5, pred="EVE", mod1="AttenionFocus") 
-slopedist2=simpleSlope(mod5, pred="AttenionFocus", mod1="EVE")  
-summary(slopedist) 
-summary(slopedist2) 
-
-##simple slope LOG1teaching EVE* AttenionFocus
-mod5=lmres(LOG1teaching ~ gender + educationmoma + EVE * AttenionFocus  , centered=c("EVE","AttenionFocus"), data=data)
-slopedist=simpleSlope(mod5, pred="EVE", mod1="AttenionFocus") 
-slopedist2=simpleSlope(mod5, pred="AttenionFocus", mod1="EVE")  
-summary(slopedist) 
-summary(slopedist2)
-
-
-##simple slope ChildCentered EVI* impulsive
-mod5=lmres(ChildCentered ~ gender + educationmoma + EVI * impulsive  , centered=c("EVI","impulsive"), data=data)
-slopedist=simpleSlope(mod5, pred="EVI", mod1="impulsive") 
-slopedist2=simpleSlope(mod5, pred="impulsive", mod1="EVI")  
-summary(slopedist) 
-summary(slopedist2) 
-
-##simple slope LOG1teaching EVE* PercepSensitive
-mod5=lmres(LOG1teaching ~ gender + educationmoma + EVE * PercepSensitive  , centered=c("EVE","PercepSensitive"), data=data)
-slopedist=simpleSlope(mod5, pred="EVE", mod1="PercepSensitive") 
-slopedist2=simpleSlope(mod5, pred="PercepSensitive", mod1="EVE")  
-summary(slopedist) 
-summary(slopedist2) 
-
-
-##simple slope LOG1teaching PCE* ActivityLevel
-mod5=lmres(LOG1teaching ~ gender + educationmoma + PCE * ActivityLevel  , centered=c("PCE","ActivityLevel"), data=data)
-slopedist=simpleSlope(mod5, pred="PCE", mod1="ActivityLevel") 
-slopedist2=simpleSlope(mod5, pred="ActivityLevel", mod1="PCE")  
-summary(slopedist) 
-summary(slopedist2) 
-
-
- 
-##simple slope LOG1teaching PCE* AttenionFocus
-mod5=lmres(LOG1teaching ~ gender + educationmoma + PCE * AttenionFocus  , centered=c("PCE","AttenionFocus"), data=data)
-slopedist=simpleSlope(mod5, pred="PCE", mod1="AttenionFocus") 
-slopedist2=simpleSlope(mod5, pred="AttenionFocus", mod1="PCE")  
-summary(slopedist) 
-summary(slopedist2) 
-
-
-
-##simple slope LOG1teaching PCE* inhibitory2
-mod5=lmres(LOG1teaching ~ gender + educationmoma + PCE * inhibitory2  , centered=c("PCE","inhibitory2"), data=data)
-slopedist=simpleSlope(mod5, pred="PCE", mod1="inhibitory2") 
-slopedist2=simpleSlope(mod5, pred="inhibitory2", mod1="PCE")  
-summary(slopedist) 
-summary(slopedist2) 
-
-
-##simple slope LOG1pcenter PCE* LIP
-mod5=lmres(LOG1pcenter ~ gender + educationmoma + PCE * LIP  , centered=c("PCE","LIP"), data=data)
-slopedist=simpleSlope(mod5, pred="PCE", mod1="LIP") 
-slopedist2=simpleSlope(mod5, pred="LIP", mod1="PCE")  
-summary(slopedist) 
-summary(slopedist2) 
