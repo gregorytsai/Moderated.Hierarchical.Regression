@@ -46,6 +46,7 @@ moderatorVarEnd=17
 ##Save as 3 sheet excel
 ##Needs to install Rtools: 
 ##https://github.com/stan-dev/rstan/wiki/Install-Rtools-for-Windows
+##Remember to select "Edit the system path" while installing
 wb <- createWorkbook()
 addWorksheet(wb = wb, sheetName = "Step1: Control Var.", gridLines = FALSE)
 writeData(wb = wb, sheet = 1, x = step1Result)
@@ -53,7 +54,6 @@ addWorksheet(wb = wb, sheetName = "Step2: Main Effect", gridLines = FALSE)
 writeData(wb = wb, sheet = 2, x = step2Result)
 addWorksheet(wb = wb, sheetName = "Step3: Interaction", gridLines = FALSE)
 writeData(wb = wb, sheet = 3, x = step3Result)
-names(wb)  ## ordering within workbook is not changed
 saveWorkbook(wb, "Moderated stepwise regression.xlsx",  overwrite = TRUE)
 #End of saving Excel
 
@@ -218,6 +218,18 @@ for (i in 1:ncol(dataPredictor)){
   write.csv(step2Result,"Step2.csv")
   write.csv(step3Result,"Step3.csv")
 }
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
