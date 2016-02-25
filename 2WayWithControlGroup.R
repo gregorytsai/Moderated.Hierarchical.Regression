@@ -1,7 +1,7 @@
 ##################################################################################
 ##2016.2.25
-##
 ##Author:GregTsai   Email:gregorytsai@gmail.com
+##Graduate student at National Taiwan University, department of Psychology
 ##Developed and tested on R Ver.3.2.3 Windows
 ##################################################################################
 
