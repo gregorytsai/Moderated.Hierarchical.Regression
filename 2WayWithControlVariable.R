@@ -7,7 +7,7 @@
 
 ##Install if you wish to read or save as Excel file
 install.packages("openxlsx")
-install.packages("dplyr")     #For data manipulation
+install.packages("dplyr")     #For dataRaw manipulation
 install.packages("lmSupport") #for model compare
 ##Load the package when you open R
 library(openxlsx)
@@ -17,30 +17,34 @@ library(lmSupport)
 
 
 ####Defined by user
-##Import  your data
+##Import  your dataRaw
 ##Reading csv by choosing which one
-data=read.csv(file.choose(), header=T) 
+dataRaw=read.csv(file.choose(), header=T) 
 ##Reading by assigning file names or path
-data=read.csv("FinalDataPool.csv", header=T) 
-data=read.xlsx(".xlsx")  
+dataRaw=read.csv("FinalDataPool.csv", header=T) 
+dataRaw=read.xlsx(".xlsx")  
 
 ###First assigning which variables to run, changes the values and run these part
+##Don't change but do run this line of code
+par=list()
 ##Dependent Vars column, assign the same number if there's only 1 control
-dependantVarStart=18   
-dependantVarEnd=20 
+par$dependantVarStart=18   
+par$dependantVarEnd=20 
 ##Contro variables column
-controlVarStart=3
-controlVarEnd=4
+par$controlVarStart=3
+par$controlVarEnd=4
 ##Predictor Variables column
-predictorVarStart=5
-predictorVarEnd=7
+par$predictorVarStart=5
+par$predictorVarEnd=7
 ##Moderator Variables column
-moderatorVarStart=8
-moderatorVarEnd=17
+par$moderatorVarStart=8
+par$moderatorVarEnd=17
+#Missing dataRaw:Use listwise(0) or Pairwise(1)
+par$missingMethod=0
 ###End of assigning
 
 ###About the result:
-#You can type step1Result, step2Result, step3Result to see them in R
+#You can type result$step1, result$step2, result$step3 to see them in R
 #The results will be automatically saved to working directory as 3 csv files
 #Working directory is usually in your user document folder
 #If you're not sure of where it is, use getwd() to check
@@ -51,11 +55,11 @@ moderatorVarEnd=17
 ##Remember to select "Edit the system path" while installing
 wb <- createWorkbook()
 addWorksheet(wb = wb, sheetName = "Step1_Control Var.", gridLines = T)
-writeData(wb = wb, sheet = 1, x = step1Result,colNames = F)
+writeData(wb = wb, sheet = 1, x = result$step1,colNames = F)
 addWorksheet(wb = wb, sheetName = "Step2_Main Effect", gridLines = T)
-writeData(wb = wb, sheet = 2, x = step2Result,colNames = F)
+writeData(wb = wb, sheet = 2, x = result$step2,colNames = F)
 addWorksheet(wb = wb, sheetName = "Step3_Interaction", gridLines = T)
-writeData(wb = wb, sheet = 3, x = step3Result,colNames = F)
+writeData(wb = wb, sheet = 3, x = result$step3,colNames = F)
 saveWorkbook(wb, "Moderated stepwise regression.xlsx",  overwrite = TRUE)
 #End of saving Excel
 
@@ -65,16 +69,22 @@ saveWorkbook(wb, "Moderated stepwise regression.xlsx",  overwrite = TRUE)
 
 
 #######################Don't mess with these codes, just execute#######################################
-dataDependent <- data %>% dplyr::select_(
-  paste(names(data)[dependantVarStart],names(data)[dependantVarEnd],sep=":") )
-dataControl <- data %>% dplyr::select_(
-  paste(names(data)[controlVarStart],names(data)[controlVarEnd],sep=":") )
-dataPredictor <- data %>% dplyr::select_(
-  paste(names(data)[predictorVarStart],names(data)[predictorVarEnd],sep=":") )
-dataModerator <- data %>% dplyr::select_(
-  paste(names(data)[moderatorVarStart],names(data)[moderatorVarEnd],sep=":") )
-dataAll=data.frame(scale(dataDependent),scale(dataControl),scale(dataPredictor),scale(dataModerator) ) %>%
-  dplyr::filter(complete.cases(.))
+data=list()
+data$Dependent <- dataRaw %>% dplyr::select_(
+  paste(names(dataRaw)[par$dependantVarStart],names(dataRaw)[par$dependantVarEnd],sep=":") ) 
+data$Control <- dataRaw %>% dplyr::select_(
+  paste(names(dataRaw)[par$controlVarStart],names(dataRaw)[par$controlVarEnd],sep=":") )
+data$Predictor <- dataRaw %>% dplyr::select_(
+  paste(names(dataRaw)[par$predictorVarStart],names(dataRaw)[par$predictorVarEnd],sep=":") )
+data$Moderator <- dataRaw %>% dplyr::select_(
+  paste(names(dataRaw)[par$moderatorVarStart],names(dataRaw)[par$moderatorVarEnd],sep=":") )
+if(par$missingMethod==0){
+  data$All.scaled=data.frame(scale(data$Dependent),scale(data$Control),scale(data$Predictor),scale(data$Moderator) ) %>%
+    dplyr::filter(complete.cases(.))
+}else{
+  data$All.scaled=data.frame(scale(data$Dependent),scale(data$Control),scale(data$Predictor),scale(data$Moderator) ) 
+}
+
 
 
 ##Function: Calculate regression model p
@@ -88,8 +98,13 @@ lmp <- function (modelobject)
 } 
 
 ##add significance stars, maybe doing vectorized calculation in the future
+##Bug: 0.1 will output to .1, instead of .10
 addStar <- function(name,pvalue)
 {
+  if (name==0) {name=".00"}
+  else if (name<1 & name>0) {name=gsub("^.*?\\.",".",format(name,nsmall=2))}
+  else if (name<0 & name>-1) {name=paste("-",gsub("^.*?\\.",".",format(name,nsmall=2)),sep="")}
+  
 	if (pvalue<0.001) {nameStar=paste0(name,"***")}
 	else if (pvalue<0.01) {nameStar=paste0(name,"**")}
 	else if (pvalue<=0.05) {nameStar=paste0(name,"*")}
@@ -102,134 +117,184 @@ addStar <- function(name,pvalue)
 
 #step 1 control var.
 #set step 1 result format: dep, control1, control2,... , deltr R2, Adj R2, betas...
-step1Result=matrix(nrow=1,ncol=(ncol(dataControl)*2+3))
-step1Result[1]="Dep. Var."
-step1Result[ncol(dataControl)+2]="Delta R2"
-step1Result[ncol(dataControl)+3]="Adj. R2"
-for (i in 1:ncol(dataControl)){
-  step1Result[i+1]=paste("Control Var",i)
-  step1Result[i+ncol(dataControl)+3]=paste("Control",i, "beta")
-}
-controlRegNames=names(dataControl[1])
-if(ncol(dataControl)>1){
-  for (i in 2:ncol(dataControl)){
-    controlRegNames=paste(controlRegNames,names(dataControl[i]),sep="+")
-  }
+result=list()
+result$step1=matrix(nrow=1,ncol=(ncol(data$Control)*2+7))
+result$step1[1]="Dep. Var."
+result$step1[ncol(data$Control)+2]="Pred. Var"
+result$step1[ncol(data$Control)+3]="Mod. Var."
+result$step1[ncol(data$Control)+4]="Delta R2"
+result$step1[ncol(data$Control)+5]="Adj. R2"
+result$step1[ncol(data$Control)+6]="F value"
+result$step1[ncol(data$Control)+7]="d.f."
+for (i in 1:ncol(data$Control)){
+  result$step1[i+1]=paste("Control Var",i)
+  result$step1[i+ncol(data$Control)+7]=paste("Control",i, "beta")
 }
 
 #Step2Result
-step2Result=matrix(nrow=1,ncol=7)
-step2Result=c("Dep. Var.","Pred. Var.","Mod. Var.","Delta R2","Adj.R2","Pred.Beta","Mod.Beta")
+result$step2=matrix(nrow=1,ncol=(ncol(data$Control)+9))
+result$step2[,1:9]=c("Dep. Var.","Pred. Var.","Mod. Var.","Delta R2","Adj.R2","F value","d.f","Pred.Beta","Mod.Beta")
+for (i in 1:ncol(data$Control)){
+  result$step2[9+i]=paste("Control",i, "beta")
+}
 
 #Step3Result
-step3Result=matrix(nrow=1,ncol=8)
-step3Result=c("Dep. Var.","Pred. Var.","Mod. Var.","Delta R2","Adj.R2","Pred.Beta","Mod.Beta","Interaction b")
-
-# i=1
-
-#Starts Regressions
-for (i in 1:ncol(dataDependent)){
-  ##Step 1
-  result1Temp=matrix(nrow=1,ncol=ncol(step1Result))
-  stpe1Regression=lm(formula=paste(names(dataDependent[i]),controlRegNames,sep="~"),data=dataAll)
-  Step1Summary=summary(stpe1Regression)
-  model1P=lmp(stpe1Regression)
-  result1Temp[1]=names(dataDependent[i])                  #Dependent Var. name
-  result1Temp[ncol(dataControl)+2]=Step1Summary$r.squared %>% round(.,2) #delta R2
-  result1Temp[ncol(dataControl)+3]=Step1Summary$adj.r.squared %>%  #Adj. R2
-    round(.,2) %>%
-    addStar(.,model1P)
-  for (j in 1:ncol(dataControl)){
-    result1Temp[j+1]=names(dataControl[j])
-    result1Temp[j+ncol(dataControl)+3]=
-      Step1Summary$coefficients[names(dataControl[j]),"Estimate"] %>%
-      round(.,2) %>%
-      addStar(., Step1Summary$coefficients[names(dataControl[j]),"Pr(>|t|)"])
-  }
-  step1Result=rbind(step1Result,result1Temp)
-  
-  #Debugging
-  # j=1
-  # k=1
-  
-  #Step2 & 3
-  for (j in 1:ncol(dataPredictor)){
-    for (k in 1:ncol(dataModerator)){
-      #Step2
-      result2Temp=matrix(nrow=1,ncol=7)
-      step2Formula=paste(names(dataDependent[i]),"~",
-                         controlRegNames,"+",
-                         names(dataPredictor[j]),"+",
-                         names(dataModerator[k]))
-      stpe2Regression=lm(formula=step2Formula,data=dataAll)
-      Step2Summary=summary(stpe2Regression)
-      model2P=lmp(stpe2Regression)
-      step2ModelCompare=modelCompare(stpe1Regression, stpe2Regression)
-      result2Temp[1]=names(dataDependent[i])                  #Dependent Var. name
-      result2Temp[2]=names(dataPredictor[j])                  #Predictor Var. name
-      result2Temp[3]=names(dataModerator[k])                  #Moderator Var. name
-      result2Temp[4]=step2ModelCompare$DeltaR2 %>%            #delta R2
-        round(.,2) %>% addStar(.,step2ModelCompare$p)
-      result2Temp[5]=Step2Summary$adj.r.squared %>% #Adj. R2
-        round(.,2) %>% addStar(.,model2P)
-      result2Temp[6]=                                         #Predictor beta
-        Step2Summary$coefficients[names(dataPredictor[j]),"Estimate"] %>%
-        round(.,2) %>%
-        addStar(.,Step2Summary$coefficients[names(dataPredictor[j]),"Pr(>|t|)"])
-      result2Temp[7]=                                         #Moderator beta
-        Step2Summary$coefficients[names(dataModerator[k]),"Estimate"] %>%
-        round(.,2) %>%
-        addStar(.,Step2Summary$coefficients[names(dataModerator[k]),"Pr(>|t|)"])
-      step2Result=rbind(step2Result,result2Temp)
-      
-      #Step3
-      result3Temp=matrix(nrow=1,ncol=8)
-      step3Formula=paste(names(dataDependent[i]),"~",
-                         controlRegNames,"+",
-                         names(dataPredictor[j]),"*",
-                         names(dataModerator[k]))
-      stpe3Regression=lm(formula=step3Formula,data=dataAll)
-      Step3Summary=summary(stpe3Regression)
-      model3P=lmp(stpe3Regression)
-      step3ModelCompare=modelCompare(stpe2Regression, stpe3Regression)
-      result3Temp[1]=names(dataDependent[i])                  #Dependent Var. name
-      result3Temp[2]=names(dataPredictor[j])                  #Predictor Var. name
-      result3Temp[3]=names(dataModerator[k])                  #Moderator Var. name
-      result3Temp[4]=step3ModelCompare$DeltaR2 %>%            #delta R2
-        round(.,2) %>% addStar(.,step3ModelCompare$p)
-      result3Temp[5]=Step3Summary$adj.r.squared %>% #Adj. R2
-        round(.,2) %>% addStar(.,model3P)
-      result3Temp[6]=                                         #Predictor beta
-        Step3Summary$coefficients[names(dataPredictor[j]),"Estimate"] %>%
-        round(.,2) %>%
-        addStar(.,Step3Summary$coefficients[names(dataPredictor[j]),"Pr(>|t|)"])
-      result3Temp[7]=                                         #Moderator beta
-        Step3Summary$coefficients[names(dataModerator[k]),"Estimate"] %>%
-        round(.,2) %>%
-        addStar(.,Step3Summary$coefficients[names(dataModerator[k]),"Pr(>|t|)"])
-      result3Temp[8]=                                         #Interaction beta
-        Step3Summary$coefficients[paste0(names(dataPredictor[j]),":",names(dataModerator[k])),"Estimate"] %>%
-        round(.,2) %>%
-        addStar(.,Step3Summary$coefficients[paste0(names(dataPredictor[j]),":",names(dataModerator[k])),"Pr(>|t|)"])
-      
-      step3Result=rbind(step3Result,result3Temp)
-      
-    }
-  }
-  ##Save as csv, after every predictor 
-  write.csv(step1Result,"Step1.csv")
-  write.csv(step2Result,"Step2.csv")
-  write.csv(step3Result,"Step3.csv")
+result$step3=matrix(nrow=1,ncol=(ncol(data$Control)+10))
+result$step3[,1:10]=c("Dep. Var.","Pred. Var.","Mod. Var.","Delta R2","Adj.R2","F value","d.f","Pred.Beta","Mod.Beta","Interaction b")
+for (i in 1:ncol(data$Control)){
+  result$step3[10+i]=paste("Control",i, "beta")
 }
 
 
+formulas=list()
+formulas$controlNames=names(data$Control[1])
+if(ncol(data$Control)>1){
+  for (i in 2:ncol(data$Control)){
+    formulas$controlNames=paste(formulas$controlNames,names(data$Control[i]),sep="+")
+  }
+}
+
+#Usful for debugging, skip loop testing codes inside 
+#i=1
+#j=2
+#k=3
 
 
-
-
-
-
-
+#Starts Regressions
+for (i in 1:ncol(data$Dependent)){
+  for (j in 1:ncol(data$Predictor)){
+    for (k in 1:ncol(data$Moderator)){
+      #Check missing data handling method
+      #If: using Pairwise-missing-delete(par$missingMethod==1), resample every loop combination
+      #If: using listwise-missing-delete(par$missingMethod==0), alway use all filtered data
+      if (par$missingMethod==1){
+        data$inLoop=data$All.scaled %>% 
+          dplyr::select_(
+            paste(names(data$Control[1]),names(data$Control[ncol(data$Control)]),sep=":"),
+            names(data$Dependent[i]),names(data$Predictor[j]),names(data$Moderator[k])
+          ) %>% dplyr::filter(complete.cases(.))
+      }else if (par$missingMethod==0){data$inLoop=data$All.scaled }
+      
+      #Run Step 1 Regression
+      #Only run in 2 conditions:
+      #1.Use Pairwise-missing-delete(par$missingMethod==1):
+      #  run in every i,j,k due to different n in diff. combinations
+      #2.listwise-missing-delete(par$missingMethod==0):
+      #  only run when j==1 & k==1(new dep. var.)
+      if ( (par$missingMethod==1) | (par$missingMethod==0 & j==1 & k==1) ){
+        result$step1Temp=matrix(nrow=1,ncol=ncol(result$step1))       #Temp result ready to row bind to final result
+        result$stpe1Regression=lm(formula=paste(names(data$Dependent[i]),formulas$controlNames,sep="~"),data=data$inLoop) #running regression, save for later model p and model compare calculation
+        result$Step1Summary=summary(result$stpe1Regression) #Get regression summary, betas and ps.
+        result$model1P=lmp(result$stpe1Regression)          #Get model p, because you can't get it in summary
+        result$step1Temp[1]=names(data$Dependent[i])        #Writing Dependent Var. name
+        result$step1Temp[ncol(data$Control)+2] =            #Writing Pred. Var. name only when par$missingMethod==1
+          ifelse(par$missingMethod==1,names(data$Predictor[j]),NA) 
+        result$step1Temp[ncol(data$Control)+3] =            #Writing Mod. Var. name only when par$missingMethod==1
+          ifelse(par$missingMethod==1,names(data$Moderator[k]),NA) 
+        result$step1Temp[ncol(data$Control)+4]=result$Step1Summary$r.squared %>% 
+          round(.,2) %>%    addStar(.,1)                    #Writing delta R2
+        result$step1Temp[ncol(data$Control)+5]=result$Step1Summary$adj.r.squared %>%  
+          round(.,2) %>%    addStar(.,result$model1P)       #Writing Adj. R2
+        result$step1Temp[ncol(data$Control)+6]=             #Writing F value
+          result$Step1Summary$fstatistic[1] %>% round(.,2)
+        result$step1Temp[ncol(data$Control)+7]=             #Writing df
+          paste(result$Step1Summary$fstatistic[2],result$Step1Summary$fstatistic[3],sep=",")
+        #Then writing control betas
+        for (l in 1:ncol(data$Control)){
+          result$step1Temp[l+1]=names(data$Control[l])
+          result$step1Temp[l+ncol(data$Control)+7]=
+            result$Step1Summary$coefficients[names(data$Control[l]),"Estimate"] %>%
+            round(.,2) %>%
+            addStar(., result$Step1Summary$coefficients[names(data$Control[l]),"Pr(>|t|)"])
+        }
+        result$step1=rbind(result$step1,result$step1Temp)
+      }
+      
+      
+      #Step2
+      result$step2Temp=matrix(nrow=1,ncol=ncol(result$step2)) #Temp result ready to row bind to final result
+      formulas$step2=paste(names(data$Dependent[i]),"~",
+                           formulas$controlNames,"+",
+                           names(data$Predictor[j]),"+",
+                           names(data$Moderator[k]))                #Step 2 regression formula
+      result$stpe2Regression=lm(formula=formulas$step2,data=data$inLoop)
+      result$step2Summary=summary(result$stpe2Regression)
+      result$model2P=lmp(result$stpe2Regression)
+      result$step2ModelCompare=modelCompare(result$stpe1Regression, result$stpe2Regression)
+      result$step2Temp[1]=names(data$Dependent[i])                  #Dependent Var. name
+      result$step2Temp[2]=names(data$Predictor[j])                  #Predictor Var. name
+      result$step2Temp[3]=names(data$Moderator[k])                  #Moderator Var. name
+      result$step2Temp[4]=result$step2ModelCompare$DeltaR2 %>%            #delta R2
+        round(.,2) %>% addStar(.,result$step2ModelCompare$p)
+      result$step2Temp[5]=result$step2Summary$adj.r.squared %>% #Adj. R2
+        round(.,2) %>% addStar(.,result$model2P)
+      result$step2Temp[6]=             #Writing F value
+        result$step2Summary$fstatistic[1] %>% round(.,2)
+      result$step2Temp[7]=             #Writing df
+        paste(result$step2Summary$fstatistic[2],result$step2Summary$fstatistic[3],sep=",")
+      result$step2Temp[8]=                                         #Predictor beta
+        result$step2Summary$coefficients[names(data$Predictor[j]),"Estimate"] %>%
+        round(.,2) %>%
+        addStar(.,result$step2Summary$coefficients[names(data$Predictor[j]),"Pr(>|t|)"])
+      result$step2Temp[9]=                                         #Moderator beta
+        result$step2Summary$coefficients[names(data$Moderator[k]),"Estimate"] %>%
+        round(.,2) %>%
+        addStar(.,result$step2Summary$coefficients[names(data$Moderator[k]),"Pr(>|t|)"])
+      for (l in 1:ncol(data$Control)) {
+        result$step2Temp[9+l]= 
+          result$step2Summary$coefficients[names(data$Control[l]),"Estimate"] %>%
+          round(.,2) %>%
+          addStar(.,result$step2Summary$coefficients[names(data$Control[l]),"Pr(>|t|)"])
+      }
+      result$step2=rbind(result$step2,result$step2Temp)
+      
+      #Step3
+      result$step3Temp=matrix(nrow=1,ncol=ncol(result$step3) )  #Temp result ready to row bind to final result
+      formulas$step3=paste(names(data$Dependent[i]),"~",
+                           formulas$controlNames,"+",
+                           names(data$Predictor[j]),"*",
+                           names(data$Moderator[k]))
+      result$stpe3Regression=lm(formula=formulas$step3,data=data$inLoop)
+      result$step3Summary=summary(result$stpe3Regression)
+      result$model3P=lmp(result$stpe3Regression)
+      result$step3ModelCompare=modelCompare(result$stpe2Regression, result$stpe3Regression)
+      result$step3Temp[1]=names(data$Dependent[i])                  #Dependent Var. name
+      result$step3Temp[2]=names(data$Predictor[j])                  #Predictor Var. name
+      result$step3Temp[3]=names(data$Moderator[k])                  #Moderator Var. name
+      result$step3Temp[4]=result$step3ModelCompare$DeltaR2 %>%            #delta R2
+        round(.,2) %>% addStar(.,result$step3ModelCompare$p)
+      result$step3Temp[5]=result$step3Summary$adj.r.squared %>% #Adj. R2
+        round(.,2) %>% addStar(.,result$model3P)
+      result$step3Temp[6]=             #Writing F value
+        result$step3Summary$fstatistic[1] %>% round(.,2)
+      result$step3Temp[7]=             #Writing df
+        paste(result$step3Summary$fstatistic[2],result$step3Summary$fstatistic[3],sep=",")
+      result$step3Temp[8]=                                         #Predictor beta
+        result$step3Summary$coefficients[names(data$Predictor[j]),"Estimate"] %>%
+        round(.,2) %>%
+        addStar(.,result$step3Summary$coefficients[names(data$Predictor[j]),"Pr(>|t|)"])
+      result$step3Temp[9]=                                         #Moderator beta
+        result$step3Summary$coefficients[names(data$Moderator[k]),"Estimate"] %>%
+        round(.,2) %>%
+        addStar(.,result$step3Summary$coefficients[names(data$Moderator[k]),"Pr(>|t|)"])
+      result$step3Temp[10]=                                         #Interaction beta
+        result$step3Summary$coefficients[paste0(names(data$Predictor[j]),":",names(data$Moderator[k])),"Estimate"] %>%
+        round(.,2) %>%
+        addStar(.,result$step3Summary$coefficients[paste0(names(data$Predictor[j]),":",names(data$Moderator[k])),"Pr(>|t|)"])
+      for (l in 1:ncol(data$Control)) {
+        result$step3Temp[10+l]= 
+          result$step3Summary$coefficients[names(data$Control[l]),"Estimate"] %>%
+          round(.,2) %>%
+          addStar(.,result$step3Summary$coefficients[names(data$Control[l]),"Pr(>|t|)"])
+      }
+      result$step3=rbind(result$step3,result$step3Temp)
+    }
+  }
+  ##Save as csv, after every predictor 
+  write.csv(result$step1,"Step1.csv")
+  write.csv(result$step2,"Step2.csv")
+  write.csv(result$step3,"Step3.csv")
+}
 
 
 
