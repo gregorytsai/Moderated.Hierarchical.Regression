@@ -1,5 +1,5 @@
 ##################################################################################
-##2016.2.25
+##2016.2.26
 ##Author:GregTsai   Email:gregorytsai@gmail.com
 ##Graduate student at National Taiwan University, department of Psychology
 ##Developed and tested on R Ver.3.2.3 Windows
@@ -7,7 +7,7 @@
 
 ##Install if you wish to read or save as Excel file
 install.packages("openxlsx")
-install.packages("dplyr")     #For dataRaw manipulation
+install.packages("dplyr")     #For data manipulation
 install.packages("lmSupport") #for model compare
 ##Load the package when you open R
 library(openxlsx)
@@ -62,6 +62,7 @@ addWorksheet(wb = wb, sheetName = "Step3_Interaction", gridLines = T)
 writeData(wb = wb, sheet = 3, x = result$step3,colNames = F)
 saveWorkbook(wb, "Moderated stepwise regression.xlsx",  overwrite = TRUE)
 #End of saving Excel
+#Considering combining three sheets, maybe later~!
 
 
 #After assigning which variables to run, just execute all the codes below 
@@ -97,8 +98,8 @@ lmp <- function (modelobject)
 	return(p)
 } 
 
-##add significance stars, maybe doing vectorized calculation in the future
-##Bug: 0.1 will output to .1, instead of .10
+##add significance stars and format to APA style
+##maybe doing vectorized calculation in the future
 addStar <- function(name,pvalue)
 {
   if (name==0) {name=".00"}
@@ -186,6 +187,7 @@ for (i in 1:ncol(data$Dependent)){
         result$stpe1Regression=lm(formula=paste(names(data$Dependent[i]),formulas$controlNames,sep="~"),data=data$inLoop) #running regression, save for later model p and model compare calculation
         result$Step1Summary=summary(result$stpe1Regression) #Get regression summary, betas and ps.
         result$model1P=lmp(result$stpe1Regression)          #Get model p, because you can't get it in summary
+        #Writing results, considering using column names in the future
         result$step1Temp[1]=names(data$Dependent[i])        #Writing Dependent Var. name
         result$step1Temp[ncol(data$Control)+2] =            #Writing Pred. Var. name only when par$missingMethod==1
           ifelse(par$missingMethod==1,names(data$Predictor[j]),NA) 
