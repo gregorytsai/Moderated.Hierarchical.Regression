@@ -198,7 +198,7 @@ for (i in 1:ncol(data$Dependent)){
         result$step1Temp[ncol(data$Control)+5]=result$Step1Summary$adj.r.squared %>%  
           round(.,2) %>%    addStar(.,result$model1P)       #Writing Adj. R2
         result$step1Temp[ncol(data$Control)+6]=             #Writing F value
-          result$Step1Summary$fstatistic[1] %>% round(.,2)
+          result$Step1Summary$fstatistic[1] %>% round(.,2) %>% format(.,nsmall=2)
         result$step1Temp[ncol(data$Control)+7]=             #Writing df
           paste(result$Step1Summary$fstatistic[2],result$Step1Summary$fstatistic[3],sep=",")
         #Then writing control betas
@@ -231,7 +231,7 @@ for (i in 1:ncol(data$Dependent)){
       result$step2Temp[5]=result$step2Summary$adj.r.squared %>% #Adj. R2
         round(.,2) %>% addStar(.,result$model2P)
       result$step2Temp[6]=             #Writing F value
-        result$step2Summary$fstatistic[1] %>% round(.,2)
+        result$step2Summary$fstatistic[1] %>% round(.,2) %>% format(.,nsmall=2)
       result$step2Temp[7]=             #Writing df
         paste(result$step2Summary$fstatistic[2],result$step2Summary$fstatistic[3],sep=",")
       result$step2Temp[8]=                                         #Predictor beta
@@ -268,7 +268,7 @@ for (i in 1:ncol(data$Dependent)){
       result$step3Temp[5]=result$step3Summary$adj.r.squared %>% #Adj. R2
         round(.,2) %>% addStar(.,result$model3P)
       result$step3Temp[6]=             #Writing F value
-        result$step3Summary$fstatistic[1] %>% round(.,2)
+        result$step3Summary$fstatistic[1] %>% round(.,2) %>% format(.,nsmall=2)
       result$step3Temp[7]=             #Writing df
         paste(result$step3Summary$fstatistic[2],result$step3Summary$fstatistic[3],sep=",")
       result$step3Temp[8]=                                         #Predictor beta
