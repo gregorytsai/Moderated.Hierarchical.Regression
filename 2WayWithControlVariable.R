@@ -73,10 +73,9 @@ dataPredictor <- data %>% dplyr::select_(
   paste(names(data)[predictorVarStart],names(data)[predictorVarEnd],sep=":") )
 dataModerator <- data %>% dplyr::select_(
   paste(names(data)[moderatorVarStart],names(data)[moderatorVarEnd],sep=":") )
-dataAll=data.frame(dataDependent,scale(dataControl),scale(dataPredictor),scale(dataModerator) ) %>%
+dataAll=data.frame(scale(dataDependent),scale(dataControl),scale(dataPredictor),scale(dataModerator) ) %>%
   dplyr::filter(complete.cases(.))
 
-#Test
 
 ##Function: Calculate regression model p
 lmp <- function (modelobject) 
