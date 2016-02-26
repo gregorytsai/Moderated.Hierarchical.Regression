@@ -349,6 +349,10 @@ for (i in 1:ncol(data$Dependent)){
       #Doing post-hoc using Simple Slope Analysis
       if (result$step3Summary$coefficients[paste0(names(data$Predictor[j]),":",names(data$Moderator[k])),"Pr(>|t|)"]<0.1) {
         result=simpleSlopeTest(result,data,i,j,k)
+        dataReverse=data
+        dataReverse$Predictor=data$Moderator
+        dataReverse$Moderator=data$Predictor
+        result=simpleSlopeTest(result,dataReverse,i,k,j)
        }
     }
   }
