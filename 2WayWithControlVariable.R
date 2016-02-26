@@ -76,6 +76,8 @@ dataModerator <- data %>% dplyr::select_(
 dataAll=data.frame(dataDependent,scale(dataControl),scale(dataPredictor),scale(dataModerator) ) %>%
   dplyr::filter(complete.cases(.))
 
+#Test
+
 ##Function: Calculate regression model p
 lmp <- function (modelobject) 
 {
