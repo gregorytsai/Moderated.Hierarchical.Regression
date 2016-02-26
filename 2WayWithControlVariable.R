@@ -105,8 +105,8 @@ addStar <- function(name,pvalue)
   if (name==0) {name=".00"}
   else if (name<1 & name>0) {name=gsub("^.*?\\.",".",format(name,nsmall=2))}
   else if (name<0 & name>-1) {name=paste("-",gsub("^.*?\\.",".",format(name,nsmall=2)),sep="")}
-  
-	if (pvalue<0.001) {nameStar=paste0(name,"***")}
+  else {name=format(name,nsmall=2)}
+  if (pvalue<0.001) {nameStar=paste0(name,"***")}
 	else if (pvalue<0.01) {nameStar=paste0(name,"**")}
 	else if (pvalue<=0.05) {nameStar=paste0(name,"*")}
 	else if (pvalue<0.10) {nameStar=paste0(name,"†")}
