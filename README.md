@@ -10,7 +10,7 @@ There are currently 2 versions: <br />
     Step2: Dependent ~ Control variables + 1 Predictor + 1 moderator <br />
     Step3: Dependent ~ Control variables + 1 Predictor + 1 moderator + predictor*moderator <br />
   Then save 3 steps regression results to 3 csv files or single excel file with 3 sheets. <br />
-1.File: 2Way_ControlVar_SimpleSlope.R  : Does 3 step moderated step-wise multiple regression WITH simple slope analysis post-hoc <br />
+1.File: 2Way_ControlVar_SimpleSlope.R  : Does 3 step moderated step-wise regression WITH simple slope analysis post-hoc <br />
     Step1: Dependent ~ Control variables  <br />
     Step2: Dependent ~ Control variables + 1 Predictor + 1 moderator <br />
     Step3: Dependent ~ Control variables + 1 Predictor + 1 moderator + predictor*moderator <br />
