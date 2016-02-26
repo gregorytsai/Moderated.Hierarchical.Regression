@@ -43,7 +43,7 @@ par$predictorVarEnd=7
 par$moderatorVarStart=8
 par$moderatorVarEnd=17
 #Missing dataRaw:Use listwise(0) or Pairwise(1)
-par$missingMethod=0
+par$missingMethod=1
 ###End of assigning
 
 ###About the result:
@@ -138,7 +138,7 @@ simpleSlopeTest = function(result,data, i,j,k){
   result$simpleTemp[1,"Mod. Var."]=names(data$Moderator[k])
   for (l in 1:2){
     result$simpleTemp[l,"Mod.Group"]=
-      ifelse(l==1,paste("Low",names(data$Moderator[k]),"(-1SD)"),paste("High",names(data$Moderator[k]),"(-1SD)")   )
+      ifelse(l==1,paste("Low",names(data$Moderator[k]),"(-1SD)"),paste("High",names(data$Moderator[k]),"(+1SD)")   )
     result$simpleTemp[l,"Simple Slope"]=
       result$simpleSummary$simple_slope[l,"simple slope"] %>% 
       round(.,2) %>% addStar(.,result$simpleSummary$simple_slope[l,"p.value"])
