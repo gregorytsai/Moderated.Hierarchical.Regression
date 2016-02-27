@@ -10,12 +10,13 @@ install.packages("openxlsx")
 install.packages("dplyr")     #For data manipulation
 install.packages("lmSupport") #for model compare, maybe don't use in the future 
 install.packages("pequod")    #for simpleSlope
+install.packages("foreign")  #For spss file import
 ##Load the package when you open R
 library(openxlsx)
 library(dplyr)
 library(lmSupport)
 library(pequod)
-
+library(foreign)
 
 
 
@@ -26,6 +27,8 @@ dataRaw=read.csv(file.choose(), header=T)
 ##Reading by assigning file names or path
 dataRaw=read.csv("FinalDataPool.csv", header=T) 
 dataRaw=read.xlsx(".xlsx")  
+dataRaw = read.spss("data.sav", to.data.frame=TRUE, use.value.labels = F)
+
 
 ###First assigning which variables to run, changes the values and run these part
 ##Don't change but do run this line of code
