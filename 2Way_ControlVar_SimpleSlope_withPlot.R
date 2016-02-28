@@ -1,5 +1,6 @@
 ##################################################################################
-##2016.2.26
+##2016.2.28
+##Can be very slow if your data is large, use with caution
 ##Author:GregTsai   Email:gregorytsai@gmail.com
 ##Graduate student at National Taiwan University, department of Psychology
 ##Developed and tested on R Ver.3.2.3 Windows
