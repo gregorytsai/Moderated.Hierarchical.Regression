@@ -8,13 +8,11 @@
 ##Install if you wish to read or save as Excel file
 install.packages("openxlsx")
 install.packages("dplyr")     #For data manipulation
-install.packages("lmSupport") #for model compare, maybe don't use in the future 
 install.packages("pequod")    #for simpleSlope
 install.packages("foreign")  #For spss file import
 ##Load the package when you open R
 library(openxlsx)
 library(dplyr)
-library(lmSupport)
 library(pequod)
 library(foreign)
 
@@ -34,20 +32,26 @@ dataRaw = read.spss("data.sav", to.data.frame=TRUE, use.value.labels = F)
 ##Don't change but do run this line of code
 par=list()
 ##Dependent Vars column, assign the same number if there's only 1 control
-par$dependantVarStart=18   
-par$dependantVarEnd=20 
+par$dependantVarStart=4   
+par$dependantVarEnd=7
 ##Contro variables column
-par$controlVarStart=3
-par$controlVarEnd=4
+par$controlVarStart=1
+par$controlVarEnd=3
 ##Predictor Variables column
-par$predictorVarStart=5
-par$predictorVarEnd=7
+par$predictorVarStart=10
+par$predictorVarEnd=ncol(dataRaw)
 ##Moderator Variables column
 par$moderatorVarStart=8
-par$moderatorVarEnd=17
+par$moderatorVarEnd=9
 #Missing dataRaw:Use listwise(0) or Pairwise(1)
 par$missingMethod=1
+#Coded Data(Categorical, won't convert to z score)
+#If there's coded data, type in the names of coded var. 
+#eg. =c("Gender") or =c("f1","f2")...
+#Otherwise type =c("")
+par$coded=c("v1")
 ###End of assigning
+
 
 ###About the result:
 #You can type result$step1, result$step2, result$step3 to see them in R
@@ -78,6 +82,7 @@ saveWorkbook(wb, "2 Way Moderation with Simple Slope.xlsx",  overwrite = TRUE)
 
 
 #######################Don't mess with these codes, just execute#######################################
+#Select data and convert to z score
 data=list()
 data$Dependent <- dataRaw %>% dplyr::select_(
   paste(names(dataRaw)[par$dependantVarStart],names(dataRaw)[par$dependantVarEnd],sep=":") ) 
@@ -95,6 +100,18 @@ if(par$missingMethod==0){
   data$All.scaled=data.frame(scale(data$Dependent),scale(data$Control),scale(data$Predictor),scale(data$Moderator) ) 
 }
 
+
+#Checking coded var. and revert back to original score, kind of dumb but works
+if (nchar(par$coded[1])>0){              #to see if user assigned any coded var.
+  for (i in 1:length(par$coded)) {       #Revert every scaled coded var.
+    #Check to see if the coded var. name can be found in the data
+    if (length(grep(paste0("^",par$coded[i],"$"),names(data$All.scaled)))==0){
+      print(paste0("[Error]Coded Var.",i," Not Found"))
+    }else{
+      data$All.scaled[,par$coded[i]]=data$All.Original[,par$coded[i]]
+    }
+  }
+}
 
 
 ##Function: Calculate regression model p
@@ -133,7 +150,7 @@ simpleSlopeTest = function(result,data, i,j,k){
                          centered=c(names(data$Predictor[j]),names(data$Moderator[k])),
                          data=data$All.Original)
   result$simpleTest=
-    simpleSlope(result$simpleFit,pred=names(data$Predictor[j]),mod1=names(data$Moderator[k] ) )
+    simpleSlope(result$simpleFit,pred=names(data$Predictor[j]),mod1=names(data$Moderator[k]),coded=par$coded )
   result$simpleSummary=summary(result$simpleTest) 
   # PlotSlope(result$simpleTest) 
   result$simpleTemp[1,"Dep. Var."]=names(data$Dependent[i])
@@ -204,7 +221,7 @@ colnames(result$simpleSlope)=c("Dep. Var.","Pred. Var.","Mod. Var.",
                                "t-Value","p-Value","Low Pred.Point","High Pred.Point")
 
 
-
+#Regression formulas in 3 steps
 formulas=list()
 formulas$controlNames=names(data$Control[1])
 if(ncol(data$Control)>1){
@@ -280,12 +297,12 @@ for (i in 1:ncol(data$Dependent)){
       result$stpe2Regression=lm(formula=formulas$step2,data=data$inLoop)
       result$step2Summary=summary(result$stpe2Regression)
       result$model2P=lmp(result$stpe2Regression)
-      result$step2ModelCompare=modelCompare(result$stpe1Regression, result$stpe2Regression)
+      result$step2ModelCompare=anova(result$stpe1Regression, result$stpe2Regression)
       result$step2Temp[1]=names(data$Dependent[i])                  #Dependent Var. name
       result$step2Temp[2]=names(data$Predictor[j])                  #Predictor Var. name
       result$step2Temp[3]=names(data$Moderator[k])                  #Moderator Var. name
-      result$step2Temp[4]=result$step2ModelCompare$DeltaR2 %>%            #delta R2
-        round(.,2) %>% addStar(.,result$step2ModelCompare$p)
+      result$step2Temp[4]=(result$step2Summary$r.squared-result$Step1Summary$r.squared) %>%            #delta R2
+        round(.,2) %>% addStar(.,result$step2ModelCompare[2,"Pr(>F)"])
       result$step2Temp[5]=result$step2Summary$adj.r.squared %>% #Adj. R2
         round(.,2) %>% addStar(.,result$model2P)
       result$step2Temp[6]=             #Writing F value
@@ -317,12 +334,12 @@ for (i in 1:ncol(data$Dependent)){
       result$stpe3Regression=lm(formula=formulas$step3,data=data$inLoop)
       result$step3Summary=summary(result$stpe3Regression)
       result$model3P=lmp(result$stpe3Regression)
-      result$step3ModelCompare=modelCompare(result$stpe2Regression, result$stpe3Regression)
+      result$step3ModelCompare=anova(result$stpe2Regression, result$stpe3Regression)
       result$step3Temp[1]=names(data$Dependent[i])                  #Dependent Var. name
       result$step3Temp[2]=names(data$Predictor[j])                  #Predictor Var. name
       result$step3Temp[3]=names(data$Moderator[k])                  #Moderator Var. name
-      result$step3Temp[4]=result$step3ModelCompare$DeltaR2 %>%            #delta R2
-        round(.,2) %>% addStar(.,result$step3ModelCompare$p)
+      result$step3Temp[4]=(result$step3Summary$r.squared-result$step2Summary$r.squared) %>%            #delta R2
+        round(.,2) %>% addStar(.,result$step3ModelCompare[2,"Pr(>F)"])
       result$step3Temp[5]=result$step3Summary$adj.r.squared %>% #Adj. R2
         round(.,2) %>% addStar(.,result$model3P)
       result$step3Temp[6]=             #Writing F value

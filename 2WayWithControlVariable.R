@@ -8,12 +8,10 @@
 ##Install if you wish to read or save as Excel file
 install.packages("openxlsx")
 install.packages("dplyr")     #For data manipulation
-install.packages("lmSupport") #for model compare, maybe don't use in the future 
 install.packages("foreign")  #For spss file import
 ##Load the package when you open R
 library(openxlsx)
 library(dplyr)
-library(lmSupport)
 library(foreign)
 
 
@@ -45,6 +43,11 @@ par$moderatorVarStart=8
 par$moderatorVarEnd=17
 #Missing dataRaw:Use listwise(0) or Pairwise(1)
 par$missingMethod=0
+#Coded Data(Categorical, won't convert to z score)
+#If there's coded data, type in the names of coded var. 
+#eg. =c("Gender") or =c("f1","f2")...
+#Otherwise type =c("")
+par$coded=c("v1","f12")
 ###End of assigning
 
 ###About the result:
@@ -91,6 +94,18 @@ if(par$missingMethod==0){
 }
 
 
+#Checking coded var. and revert back to original score, kind of dumb but works
+if (nchar(par$coded[1])>0){              #to see if user assigned any coded var.
+  for (i in 1:length(par$coded)) {       #Revert every scaled coded var.
+    #Check to see if the coded var. name can be found in the data
+    if (length(grep(paste0("^",par$coded[i],"$"),names(data$All.scaled)))==0){
+      print(paste0("[Error]Coded Var.",i," Not Found"))
+    }else{
+      data$All.scaled[,par$coded[i]]=data$All.Original[,par$coded[i]]
+    }
+  }
+}
+
 
 ##Function: Calculate regression model p
 lmp <- function (modelobject) 
@@ -102,6 +117,7 @@ lmp <- function (modelobject)
 	return(p)
 } 
 
+#Function: APA style formatting
 ##add significance stars and format to APA style
 ##maybe doing vectorized calculation in the future
 addStar <- function(name,pvalue)
@@ -226,12 +242,12 @@ for (i in 1:ncol(data$Dependent)){
       result$stpe2Regression=lm(formula=formulas$step2,data=data$inLoop)
       result$step2Summary=summary(result$stpe2Regression)
       result$model2P=lmp(result$stpe2Regression)
-      result$step2ModelCompare=modelCompare(result$stpe1Regression, result$stpe2Regression)
+      result$step2ModelCompare=anova(result$stpe1Regression, result$stpe2Regression)
       result$step2Temp[1]=names(data$Dependent[i])                  #Dependent Var. name
       result$step2Temp[2]=names(data$Predictor[j])                  #Predictor Var. name
       result$step2Temp[3]=names(data$Moderator[k])                  #Moderator Var. name
-      result$step2Temp[4]=result$step2ModelCompare$DeltaR2 %>%            #delta R2
-        round(.,2) %>% addStar(.,result$step2ModelCompare$p)
+      result$step2Temp[4]=(result$step2Summary$r.squared-result$Step1Summary$r.squared) %>%            #delta R2
+        round(.,2) %>% addStar(.,result$step2ModelCompare[2,"Pr(>F)"])
       result$step2Temp[5]=result$step2Summary$adj.r.squared %>% #Adj. R2
         round(.,2) %>% addStar(.,result$model2P)
       result$step2Temp[6]=             #Writing F value
@@ -263,12 +279,12 @@ for (i in 1:ncol(data$Dependent)){
       result$stpe3Regression=lm(formula=formulas$step3,data=data$inLoop)
       result$step3Summary=summary(result$stpe3Regression)
       result$model3P=lmp(result$stpe3Regression)
-      result$step3ModelCompare=modelCompare(result$stpe2Regression, result$stpe3Regression)
+      result$step3ModelCompare=anova(result$stpe2Regression, result$stpe3Regression)
       result$step3Temp[1]=names(data$Dependent[i])                  #Dependent Var. name
       result$step3Temp[2]=names(data$Predictor[j])                  #Predictor Var. name
       result$step3Temp[3]=names(data$Moderator[k])                  #Moderator Var. name
-      result$step3Temp[4]=result$step3ModelCompare$DeltaR2 %>%            #delta R2
-        round(.,2) %>% addStar(.,result$step3ModelCompare$p)
+      result$step3Temp[4]=(result$step3Summary$r.squared-result$step2Summary$r.squared) %>%            #delta R2
+        round(.,2) %>% addStar(.,result$step3ModelCompare[2,"Pr(>F)"])
       result$step3Temp[5]=result$step3Summary$adj.r.squared %>% #Adj. R2
         round(.,2) %>% addStar(.,result$model3P)
       result$step3Temp[6]=             #Writing F value
