@@ -16,3 +16,4 @@ There are currently 2 versions: <br />
     Step3: Dependent ~ Control variables + 1 Predictor + 1 moderator + predictor x moderator <br />
     Post-Hoc: Simple slope analysis(slope,se,t,p,4 points) <br />
   Then save 4 steps regression results to 4 csv files or single excel file with 4 sheets. <br />
+3.File: 2Way_ControlVar_SimpleSlope_withPlot.R : The same with 2., but saves simple slope test plots as png files 
