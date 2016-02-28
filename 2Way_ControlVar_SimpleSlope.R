@@ -19,7 +19,7 @@ library(foreign)
 
 
 ####Defined by user
-##Import  your dataRaw
+##Import  your data
 ##Reading csv by choosing which one
 dataRaw=read.csv(file.choose(), header=T) 
 ##Reading by assigning file names or path
@@ -43,7 +43,7 @@ par$predictorVarEnd=ncol(dataRaw)
 ##Moderator Variables column
 par$moderatorVarStart=8
 par$moderatorVarEnd=9
-#Missing dataRaw:Use listwise(0) or Pairwise(1)
+#Missing data:Use listwise(0) or Pairwise(1)
 par$missingMethod=1
 #Coded Data(Categorical, won't convert to z score)
 #If there's coded data, type in the names of coded var. 
