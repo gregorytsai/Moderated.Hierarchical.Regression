@@ -83,7 +83,7 @@ saveWorkbook(wb, "2 Way Moderation with Simple Slope.xlsx",  overwrite = TRUE)
 
 #######################Don't mess with these codes, just execute#######################################
 #Create folder to save plot files
-dir.create("TwoWaySimpleSlopPlot", showWarnings = FALSE)
+dir.create("TwoWaySimpleSlopePlot", showWarnings = FALSE)
 #Select data and convert to z score
 data=list()
 data$Dependent <- dataRaw %>% dplyr::select_(
@@ -159,7 +159,7 @@ simpleSlopeTest = function(result,data, i,j,k){
   result$simpleTemp[1,"Plot name"]=
     paste0("plot",formatC(result$simpleSlopeCount,width = 4,format="d",flag="0"),".png")
   p=PlotSlope(result$simpleTest) 
-  png(filename=paste0("TwoWaySimpleSlopPlot/",result$simpleTemp[1,"Plot name"]),width = 640, height = 480)
+  png(filename=paste0("TwoWaySimpleSlopePlot/",result$simpleTemp[1,"Plot name"]),width = 640, height = 480)
   print(p)
   dev.off()
   result$simpleSlopeCount =result$simpleSlopeCount+1
