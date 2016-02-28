@@ -49,7 +49,7 @@ par$missingMethod=1
 #If there's coded data, type in the names of coded var. 
 #eg. =c("Gender") or =c("f1","f2")...
 #Otherwise type =c("")
-par$coded=c("v1")
+par$coded=c("")
 ###End of assigning
 
 
