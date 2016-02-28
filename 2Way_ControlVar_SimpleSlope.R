@@ -6,10 +6,10 @@
 ##################################################################################
 
 ##Install if you wish to read or save as Excel file
-install.packages("openxlsx")
+install.packages("openxlsx")  #Very Obvious
 install.packages("dplyr")     #For data manipulation
 install.packages("pequod")    #for simpleSlope
-install.packages("foreign")  #For spss file import
+install.packages("foreign")   #For spss file import
 ##Load the package when you open R
 library(openxlsx)
 library(dplyr)
@@ -56,9 +56,8 @@ par$coded=c("")
 ###About the result:
 #You can type result$step1, result$step2, result$step3 to see them in R
 #The results will be automatically saved to working directory as 4 csv files
-#Working directory is usually in your user document folder
-#If you're not sure of where it is, use getwd() to check
-#If you want to save as Excel, try the following code:
+#Working directory is usually in your user document folder, use getwd() to check
+#If you want to save as Excel, try the following code(Highly recommended, in APA format):
 ##Save as 4 sheet excel
 ##Needs to install Rtools: (Or Xcode on Mac? haven't test it)
 ##https://github.com/stan-dev/rstan/wiki/Install-Rtools-for-Windows
